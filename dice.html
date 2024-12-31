@@ -165,6 +165,7 @@ function setup_dice(target_el, w, h) {
 
 
         var i = 0.0;
+        window.sin_light = false;
 
         // Animation loop
         function animate() {
@@ -173,7 +174,7 @@ function setup_dice(target_el, w, h) {
             renderer.render(scene, camera);
             var speed_x = 0.04;
             var speed_y = 0.04;
-            i += 0.002;
+            i += 0.01;
             dices.forEach(dice => {
 
                 dice.rotation.x += speed_x;
@@ -184,7 +185,12 @@ function setup_dice(target_el, w, h) {
                 // dice.rotation.y = Math.PI*1.0 + Math.PI * 1.0;
                 // dice.rotation.z = Math.PI*0.5 + Math.PI * 2.0;
 
-                //directionalLight.color.set(0xffff88 * Math.sin(i));
+                if (window.sin_light) {                 	
+                	directionalLight.color.set(0xffff88 * Math.sin(i));
+                }
+                else {
+                	directionalLight.color.set(0xffffff);
+                }
 
                 speed_x += 0.002;
             });
@@ -204,12 +210,19 @@ function setup_dice(target_el, w, h) {
     };
     }
 }
+
 }
+
+
+	function toggle_disco(){
+  	window.sin_light = !window.sin_light;
+  }
 </script>
 <body style="background-color:#444">
 
 
 <div id="screen" style="width:960px; height:540px; background-color:#444">
+  <button onclick=toggle_disco()>Toggle disco</button>
 </div>
 </body>
 <script>
