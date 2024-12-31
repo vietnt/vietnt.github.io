@@ -1,156 +1,217 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Three.js Dice</title>
-</head>
-<body>
+<html>
 <script>
 // Load Three.js and its examples via CDN
-const script = document.createElement('script');
-script.src = 'https://cdn.jsdelivr.net/npm/three@latest/build/three.min.js';
-document.head.appendChild(script);
 
-script.onload = () => {
-  const orbitScript = document.createElement('script');
-  orbitScript.src = 'https://cdn.jsdelivr.net/npm/three@latest/examples/js/controls/OrbitControls.js';
-  document.head.appendChild(orbitScript);
+function setup_dice(target_el, w, h) {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/three@latest/build/three.min.js';
+    document.head.appendChild(script);
 
-  orbitScript.onload = () => {
-    const roundedBoxScript = document.createElement('script');
-    roundedBoxScript.src = 'https://cdn.jsdelivr.net/npm/three@latest/examples/js/geometries/RoundedBoxGeometry.js';
-    document.head.appendChild(roundedBoxScript);
+    script.onload = () => {
+    const orbitScript = document.createElement('script');
+    orbitScript.src = 'https://cdn.jsdelivr.net/npm/three@latest/examples/js/controls/OrbitControls.js';
+    document.head.appendChild(orbitScript);
 
-    roundedBoxScript.onload = () => {
-      // Scene, camera, and renderer setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xeeeeee);
+    orbitScript.onload = () => {
+        const roundedBoxScript = document.createElement('script');
+        roundedBoxScript.src = 'https://cdn.jsdelivr.net/npm/three@latest/examples/js/geometries/RoundedBoxGeometry.js';
+        document.head.appendChild(roundedBoxScript);
 
-      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(2, 2, 4);
+        roundedBoxScript.onload = () => {
+        // Scene, camera, and renderer setup
+        const scene = new THREE.Scene();
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+        const camera = new THREE.PerspectiveCamera(75, w/h, 0.1, 1000);
+        camera.position.set(0, 4, 4);
+        camera.lookAt(0, 0, 0);
 
-      const controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(w, h);
+        renderer.shadowMap.enabled = true;  // Enable shadow mapping
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;  // Optional: for softer shadows
 
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-      scene.add(ambientLight);
+        target_el.appendChild(renderer.domElement);
 
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-      directionalLight.position.set(5, 5, 5);
-      scene.add(directionalLight);
+        // const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        // controls.enableDamping = true;
 
-      // Create the dice with rounded corners
-      const diceGeometry = new THREE.RoundedBoxGeometry(1, 1, 1, 10, 0.2);
-      const diceMaterial = new THREE.MeshStandardMaterial({
-        color: 0xff0000, 
-        roughness: 0.1,
-        metalness: 0.1
-      });
-      const dice = new THREE.Mesh(diceGeometry, diceMaterial);
-      scene.add(dice);
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
 
-      // Function to add dots to the dice
-      function addDiceDots(facePositions) {
-        const dotMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.01, metalness: 0.1 });
-        
+        const directionalLight = new THREE.SpotLight(0xffeeee, 1.5*100);
+        directionalLight.position.set(5, 5, 5);
+        directionalLight.castShadow = true;  // Enable shadow casting for light
+        // Improve shadow quality
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        directionalLight.shadow.camera.near = 1;
+        directionalLight.shadow.camera.far = 20;
+        scene.add(directionalLight);
 
-
-        facePositions.forEach((face) => {
-            const dotGeometry = new THREE.SphereGeometry(0.08, 16, 16);
-            const n = face.length;
-            if (n == 3 || n == 4) {
-                dotGeometry.scale(1.0, 0.5, 1.0);
-            }
-            if (n == 5 || n == 2) {
-                dotGeometry.scale(0.5, 1.0, 1.0);
-            }
-
-            if (n == 6) {
-                dotGeometry.scale(1.0, 1.0, 0.5);
-            }
-            if (n == 1) {
-                dotGeometry.scale(2.0, 2.0, 0.5);
-            }
-
-          face.forEach((position) => {
-            const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-            const p = position.map(p => p * 0.95);
-            dot.position.set(p[0], p[1], p[2]);
-            dice.add(dot);
-          });
+        // Add a plane to receive shadows
+        const planeGeometry = new THREE.PlaneGeometry(15, 15);
+        const planeMaterial = new THREE.ShadowMaterial({ 
+            opacity: 0.4
         });
-      }
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI/7; //-Math.PI / 2;  // Rotate to be horizontal
+        plane.position.y = -2;  // Position below the dice
+        plane.receiveShadow = true;  // Enable shadow receiving
+        scene.add(plane);
 
-      // New dot positions so each face is on a unique side:
-      //   Face 1 -> +Z
-      //   Face 2 -> +X
-      //   Face 3 -> +Y
-      //   Face 4 -> –Y
-      //   Face 5 -> –X
-      //   Face 6 -> –Z
-      const diceDots = [
-        // Face 1 (one pip, z = +0.52)
-        [[ 0,    0,    0.52 ]],
+        // Create the dice with rounded corners
+        const diceGeometry = new THREE.RoundedBoxGeometry(1, 1, 1, 10, 0.2);
+        const diceMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff4444, 
+            roughness: 0.1,
+            metalness: 0.01
+        });
 
-        // Face 2 (two pips, x = +0.52)
-        [[ 0.52,  0.2,  0.2 ],
-         [ 0.52, -0.2, -0.2 ]],
+        function create_dice() {
+            const dice = new THREE.Mesh(diceGeometry, diceMaterial);
+            dice.castShadow = true;  // Enable shadow casting for dice
+            scene.add(dice);
 
-        // Face 3 (three pips, y = +0.52)
-        [[-0.2,  0.52,  0.2 ],
-         [ 0,    0.52,  0   ],
-         [ 0.2,  0.52, -0.2 ]],
+            // Function to add dots to the dice
+            function addDiceDots(dice, facePositions) {
+                const dotMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.01, metalness: 0.1 });
+                
 
-        // Face 4 (four pips, y = –0.52)
-        [[-0.2, -0.52,  0.2 ],
-         [-0.2, -0.52, -0.2 ],
-         [ 0.2, -0.52,  0.2 ],
-         [ 0.2, -0.52, -0.2 ]],
 
-        // Face 5 (five pips, x = –0.52)
-        [[-0.52,  0.3,   0.3 ],
-         [-0.52,  0.3,  -0.3 ],
-         [-0.52, -0.3,   0.3 ],
-         [-0.52, -0.3,  -0.3 ],
-         [-0.52,  0,     0   ]],
+                facePositions.forEach((face) => {
+                    const dotGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+                    const n = face.length;
+                    if (n == 3 || n == 4) {
+                        dotGeometry.scale(1.0, 0.4, 1.0);
+                    }
+                    if (n == 5 || n == 2) {
+                        dotGeometry.scale(0.4, 1.0, 1.0);
+                    }
 
-        // Face 6 (six pips, z = –0.52)
-        [[-0.2,  0.3,  -0.52 ],
-         [-0.2,  0,    -0.52 ],
-         [-0.2, -0.3,  -0.52 ],
-         [ 0.2,  0.3,  -0.52 ],
-         [ 0.2,  0,    -0.52 ],
-         [ 0.2, -0.3,  -0.52 ]]
-      ];
+                    if (n == 6) {
+                        dotGeometry.scale(1.0, 1.0, 0.4);
+                    }
+                    if (n == 1) {
+                        dotGeometry.scale(2.0, 2.0, 0.4);
+                    }
 
-      addDiceDots(diceDots);
+                face.forEach((position) => {
+                    const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+                    const p = position.map(p => p * 0.95);
+                    dot.position.set(p[0], p[1], p[2]);
+                    dice.add(dot);
+                });
+                });
+            }
 
-      // Animation loop
-      function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-        dice.rotation.x += 0.06;
-        dice.rotation.y += 0.02;
-        dice.rotation.z += 0.04;
-      }
+            // New dot positions so each face is on a unique side:
+            //   Face 1 -> +Z
+            //   Face 2 -> +X
+            //   Face 3 -> +Y
+            //   Face 4 -> –Y
+            //   Face 5 -> –X
+            //   Face 6 -> –Z
+            const diceDots = [
+                // Face 1 (one pip, z = +0.52)
+                [[ 0,    0,    0.52 ]],
 
-      animate();
+                // Face 2 (two pips, x = +0.52)
+                [[ 0.52,  0.2,  0.2 ],
+                [ 0.52, -0.2, -0.2 ]],
 
-      // Resize handler
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);        
-      });
+                // Face 3 (three pips, y = +0.52)
+                [[-0.2,  0.52,  0.2 ],
+                [ 0,    0.52,  0   ],
+                [ 0.2,  0.52, -0.2 ]],
+
+                // Face 4 (four pips, y = –0.52)
+                [[-0.2, -0.52,  0.2 ],
+                [-0.2, -0.52, -0.2 ],
+                [ 0.2, -0.52,  0.2 ],
+                [ 0.2, -0.52, -0.2 ]],
+
+                // Face 5 (five pips, x = –0.52)
+                [[-0.52,  0.3,   0.3 ],
+                [-0.52,  0.3,  -0.3 ],
+                [-0.52, -0.3,   0.3 ],
+                [-0.52, -0.3,  -0.3 ],
+                [-0.52,  0,     0   ]],
+
+                // Face 6 (six pips, z = –0.52)
+                [[-0.2,  0.3,  -0.52 ],
+                [-0.2,  0,    -0.52 ],
+                [-0.2, -0.3,  -0.52 ],
+                [ 0.2,  0.3,  -0.52 ],
+                [ 0.2,  0,    -0.52 ],
+                [ 0.2, -0.3,  -0.52 ]]
+            ];
+
+            addDiceDots(dice, diceDots);
+
+            dice.scale.set(1.5, 1.5, 1.5);
+            return dice;
+        }
+
+
+        const dices = [];
+
+        for (let i = 0; i < 3; i++) {
+            const dice = create_dice();
+            dice.position.set(i * 2.5 - 2.5, 0, 0);
+            dices.push(dice);
+            scene.add(dice);
+        }
+
+
+        var i = 0.0;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            //controls.update();
+            renderer.render(scene, camera);
+            var speed_x = 0.04;
+            var speed_y = 0.04;
+            i += 0.002;
+            dices.forEach(dice => {
+
+                dice.rotation.x += speed_x;
+                dice.rotation.y += speed_y;
+                dice.rotation.z += speed_x + speed_y;
+
+                // dice.rotation.x = Math.PI*0.75;
+                // dice.rotation.y = Math.PI*1.0 + Math.PI * 1.0;
+                // dice.rotation.z = Math.PI*0.5 + Math.PI * 2.0;
+
+                //directionalLight.color.set(0xffff88 * Math.sin(i));
+
+                speed_x += 0.002;
+            });
+        }
+
+
+
+        animate();
+
+        //   // Resize handler
+        //   window.addEventListener('resize', () => {
+        //     camera.aspect = window.innerWidth / window.innerHeight;
+        //     camera.updateProjectionMatrix();
+        //     renderer.setSize(window.innerWidth, window.innerHeight);        
+        //   });
+        // };
     };
-  };
-};
+    }
+}
+}
 </script>
+<body style="background-color:#444">
+
+
+<div id="screen" style="width:960px; height:540px; background-color:#444">
+</div>
 </body>
-</html>
+<script>
+	setup_dice(document.getElementById("screen"), 960, 540);
+</script>
